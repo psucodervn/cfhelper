@@ -11,7 +11,7 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:extension.parseContest"
+    "*"
   ],
   "main": "./out/extension",
   "contributes": {
@@ -20,8 +20,26 @@
         "command": "extension.parseContest",
         "title": "Parse Contest",
         "category": "CF Parser"
+      },
+      {
+        "command": "extension.login",
+        "title": "Login",
+        "category": "CF Parser"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "CF Parser configuration",
+      "properties": {
+        "cfparser": {
+          "description": "CF Parser common settings",
+          "default": {
+            "root": "src",
+            "out": "out",
+            "tmp": "tmp"
+          }
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
