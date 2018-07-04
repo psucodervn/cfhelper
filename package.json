@@ -25,6 +25,16 @@
         "command": "extension.login",
         "title": "Login",
         "category": "CF Parser"
+      },
+      {
+        "command": "extension.logout",
+        "title": "Logout",
+        "category": "CF Parser"
+      },
+      {
+        "command": "extension.submit",
+        "title": "Submit current file",
+        "category": "CF Parser"
       }
     ],
     "configuration": {

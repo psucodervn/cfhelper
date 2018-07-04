@@ -1,42 +1,50 @@
 'use strict';
 
-import { window } from 'vscode';
 import fetch, { Headers } from 'node-fetch';
 import * as cheerio from 'cheerio';
 import * as fs from 'fs';
-import * as vscode from 'vscode';
 import { Response, Contest, Problem, Test } from './interfaces';
+import { setLeftStatus, getCookie } from './commands';
 
 const HOST = 'http://codeforces.com';
-let context: vscode.ExtensionContext;
 
-export function setContext(_context: vscode.ExtensionContext) {
-  context = _context;
-}
-
-async function getResponse(url: string, title: string = '') {
-  const st = window.setStatusBarMessage(`Fetching ${title}...`);
-  const res = await fetch(url.startsWith('http') ? url : `${HOST}${url}`);
-  st.dispose();
+async function getResponse(url: string, title: string = '', useCookie: boolean = true, cookie: string = '') {
+  if (useCookie && !cookie) { cookie = getCookie(true); }
+  setLeftStatus(`Fetching ${title}...`);
+  const res = await fetch(url.startsWith('http') ? url : `${HOST}${url}`, {
+    headers: { cookie },
+    follow: 1,
+  });
+  setLeftStatus(`Fetching ${title}: done.`);
   return res;
 }
 
-async function getHTML(url: string, title: string = '') {
-  const resp = await getResponse(url, title);
+async function getHTML(url: string, title: string = '', useCookie: boolean = true) {
+  const resp = await getResponse(url, title, useCookie);
   return await resp.text();
 }
 
-async function getJSON(url: string, title: string = '') {
-  const resp = await getResponse(url, title);
+async function getJSON(url: string, title: string = '', useCookie: boolean = true) {
+  const resp = await getResponse(url, title, useCookie);
   return await resp.json();
 }
 
 export async function getContestList(recent: number = 200) {
   const url = '/api/contest.list';
-  const data: Response<Contest> = await getJSON(url, 'contest list');
+  const data: Response<Contest> = await getJSON(url, 'contest list', false);
   if (data.status !== 'OK') { return []; }
-  // return data.result.slice(0, recent);
   return data.result;
+}
+
+async function getCsrfToken(url: string, useCookie: boolean = true) {
+  const resp = await getResponse(url, url, useCookie);
+  const html = await resp.text();
+  let $ = cheerio.load(html);
+  const csrfToken = $('input[name=csrf_token]').val();
+  return {
+    csrfToken,
+    headers: resp.headers,
+  };
 }
 
 export async function getContestProblems(contest: Contest) {
@@ -103,13 +111,18 @@ function buildProblemUrl(contest: Contest, name: string) {
   return `/contest/${contest.id}/problem/${c}`;
 }
 
+/**
+ * Login and return cookie of user
+ * @param handleOrEmail handle or email
+ * @param password password
+ */
 export async function login(handleOrEmail: string, password: string) {
-  let resp = await getResponse('/enter', 'login page');
-  const htmlLogin = await resp.text();
-  let $ = cheerio.load(htmlLogin);
-  const csrfToken = $('input[name=csrf_token]').val();
-  console.log(csrfToken);
-  console.log(extractCookie(resp.headers));
+  const { csrfToken, headers } = await getCsrfToken('/enter', false);
+  if (!csrfToken) {
+    throw new Error('Cannot get csrf_token from login page.');
+  }
+
+  let cookie = extractCookie(headers);
 
   const body = {
     csrf_token: csrfToken,
@@ -118,11 +131,10 @@ export async function login(handleOrEmail: string, password: string) {
     remember: 'on',
     action: 'enter',
   };
-  console.log(encode(body));
 
-  resp = await fetch(`${HOST}/enter`, {
+  const resp = await fetch(`${HOST}/enter`, {
     headers: {
-      cookie: extractCookie(resp.headers),
+      cookie,
       'content-type': 'application/x-www-form-urlencoded',
     },
     redirect: 'manual',
@@ -130,18 +142,24 @@ export async function login(handleOrEmail: string, password: string) {
     method: 'POST',
     compress: true,
   });
-  const cookie = extractCookie(resp.headers);
-  console.log(cookie);
-  context.globalState.update('cookie', cookie);
-  console.log(resp.headers.raw());
-  await fs.writeFileSync('/tmp/a.html', await resp.text());
-  // console.log(resp);
+
+  const html = (await resp.text());
+  if (html.includes('error for__password')) {
+    throw new Error('Invalid handle/email or password');
+  }
+
+  cookie = [cookie, extractCookie(resp.headers)].join('; ');
+  return cookie;
 }
 
 function encode(obj: any) {
   return Object.keys(obj).map(k => `${encodeURIComponent(k)}=${encodeURIComponent(obj[k])}`).join('&');
 }
 
+/**
+ * Extract cookie from response headers
+ * @param headers 
+ */
 function extractCookie(headers: Headers) {
   try {
     const sr = headers.raw()['set-cookie'] as any as string[];
@@ -153,6 +171,55 @@ function extractCookie(headers: Headers) {
     return ar.join('; ');
   } catch (e) {
     console.error('extractCookie: ' + e);
-    return '';
+    throw new Error('Cannot extract cookie from response headers.');
+  }
+}
+
+export async function loggedAs() {
+  try {
+    if (!getCookie()) { return undefined; }
+    const resp = await getResponse('/profile', 'profile');
+    const html = await resp.text();
+    const $ = cheerio.load(html);
+    const header = $('#header').html();
+    if (!header) { return; }
+    const hs = header.match(/href="\/profile\/([^"]+)"/);
+    if (!hs || hs.length < 2) { return; }
+    return hs[1];
+  } catch (e) {
+    console.error('loggedAs:', e);
+    return undefined;
+  }
+}
+
+export async function submitContestProblem(code: string, contestId: string, problemId: string) {
+  let url = `http://codeforces.com/contest/${contestId}/submit`;
+  const { csrfToken } = await getCsrfToken(url, true);
+  if (!csrfToken) {
+    throw new Error(`Cannot get csrf_token in submit page (${url}).`);
+  }
+
+  url += `?csrf_token=${csrfToken}`;
+  const headers = {
+    cookie: getCookie(true),
+    'content-type': 'application/x-www-form-urlencoded',
+  };
+  const form = {
+    csrf_token: csrfToken,
+    action: 'submitSolutionFormSubmitted',
+    submittedProblemIndex: problemId,
+    programTypeId: 50, // TODO: add more languages
+    source: code,
+  };
+
+  // console.log(encode(form));
+  const resp = await fetch(url, {
+    method: 'POST', headers, body: encode(form),
+  });
+  console.log(resp.status, resp.statusText);
+  const html = await resp.text();
+  await fs.writeFileSync('/tmp/submit.html', html);
+  if (html.includes('You have submitted exactly the same code before')) {
+    throw new Error('You have submitted exactly the same code before.');
   }
 }

@@ -1,3 +1,5 @@
+import { Memento, ExtensionContext, StatusBarItem } from "vscode";
+
 export interface Contest {
   id: number;
   name: string;
@@ -60,4 +62,14 @@ export interface ProblemInput {
 
 export interface ProblemOutput {
   type: 'stdout' | 'file' | string;
+}
+
+export type State = Memento;
+
+export interface Global {
+  context: ExtensionContext;
+  leftBarItem: StatusBarItem;
+  rightBarItem: StatusBarItem;
+  contests: Contest[];
+  state: Memento;
 }
