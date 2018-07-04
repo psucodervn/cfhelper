@@ -1,11 +1,16 @@
 {
-  "name": "cf-parser",
-  "displayName": "CF Parser",
-  "description": "Codeforces parser",
+  "name": "cfhelper",
+  "displayName": "CF Helper",
+  "description": "Codeforces helper",
   "version": "0.0.1",
   "publisher": "psucoder",
+  "license": "MIT",
   "engines": {
     "vscode": "^1.24.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
   },
   "categories": [
     "Other"
@@ -19,29 +24,29 @@
       {
         "command": "extension.parseContest",
         "title": "Parse Contest",
-        "category": "CF Parser"
+        "category": "CF Helper"
       },
       {
         "command": "extension.login",
         "title": "Login",
-        "category": "CF Parser"
+        "category": "CF Helper"
       },
       {
         "command": "extension.logout",
         "title": "Logout",
-        "category": "CF Parser"
+        "category": "CF Helper"
       },
       {
         "command": "extension.submit",
         "title": "Submit current file",
-        "category": "CF Parser"
+        "category": "CF Helper"
       }
     ],
     "configuration": {
-      "title": "CF Parser configuration",
+      "title": "CF Helper configuration",
       "properties": {
-        "cfparser": {
-          "description": "CF Parser common settings",
+        "cfhelper": {
+          "description": "CF Helper common settings",
           "default": {
             "root": "src",
             "out": "out",
