@@ -73,3 +73,9 @@ export interface Global {
   contests: Contest[];
   state: Memento;
 }
+
+export interface LanguageConfig {
+  main: string;
+  ext: string;
+  template: string;
+}

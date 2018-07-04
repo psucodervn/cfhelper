@@ -108,7 +108,7 @@ export async function getContestProblems(contest: Contest) {
 
 function buildProblemUrl(contest: Contest, name: string) {
   const c = name.replace(/\..*/g, '');
-  return `/contest/${contest.id}/problem/${c}`;
+  return `http://codeforces.com/contest/${contest.id}/problem/${c}`;
 }
 
 /**

@@ -1,13 +1,20 @@
 'use strict';
 
-import { window, ExtensionContext, StatusBarAlignment } from 'vscode';
+import { window, workspace, ExtensionContext, StatusBarAlignment } from 'vscode';
 import { getContestList, getContestProblems, login, loggedAs, submitContestProblem } from './api';
-import { Contest, Problem, Global } from './interfaces';
+import { Contest, Problem, Global, LanguageConfig } from './interfaces';
+import * as path from 'path';
+import * as fs from 'fs';
 
 const keys = {
   Reload: '# Reload List...',
   Cookie: 'cookie',
   Contests: 'contests',
+  Language: 'language',
+};
+const configs = {
+  Common: 'cfhelper',
+  Languages: 'cfhelper.languages'
 };
 
 let global: Global;
@@ -98,9 +105,65 @@ async function chooseContest(): Promise<Contest | undefined> {
   return contest;
 }
 
+async function tryMkdir(...folders: string[]) {
+  for (let i = 0; i < folders.length; ++i) {
+    const fd = folders[i];
+    if (!(await fs.existsSync(fd))) {
+      await fs.mkdirSync(fd);
+      continue;
+    }
+    // TODO: check if not directory
+  }
+}
+
+async function generateSourceFile(prob: Problem, folder: string, tmplFolder: string, lang?: string) {
+  if (!lang) { lang = workspace.getConfiguration(configs.Common).get<string>('language') || 'c++14'; }
+  const langConfigs = workspace.getConfiguration(configs.Languages).get<LanguageConfig>(lang);
+  if (!langConfigs) { throw new Error(`Cannot find config for language ${lang}!`); }
+
+  let bf = await fs.readFileSync(path.join(tmplFolder, langConfigs.template)).toString();
+  bf = bf.replace('__PROB_NAME__', prob.name);
+  bf = bf.replace('__PROB_URL__', prob.url);
+
+  await fs.writeFileSync(path.join(folder, `${langConfigs.main}.${langConfigs.ext}`), bf);
+}
+
+async function generateTestFiles(prob: Problem, folder: string, lang?: string) {
+  if (!lang) { lang = workspace.getConfiguration(configs.Common).get<string>('language') || 'c++14'; }
+  const langConfigs = workspace.getConfiguration(configs.Languages).get<LanguageConfig>(lang);
+  if (!langConfigs) { throw new Error(`Cannot find config for language ${lang}!`); }
+
+  await Promise.all(prob.tests.map(async test => {
+    await fs.writeFileSync(path.join(folder, `${langConfigs.main}.${test.id}.in`), test.input);
+    await fs.writeFileSync(path.join(folder, `${langConfigs.main}.${test.id}.ans`), test.output);
+  }));
+}
+
+async function parseProblem(prob: Problem) {
+  if (!workspace.workspaceFolders) { return; }
+  const wsFolder = workspace.workspaceFolders[0];
+  const cfg = workspace.getConfiguration('cfhelper');
+
+  const src = path.resolve(cfg.get<string>('src') || 'src');
+  const srcFolder = path.join(wsFolder.uri.fsPath, src);
+  const groupFolder = path.join(srcFolder, prob.group);
+  const probFolder = path.join(groupFolder, prob.name);
+  await tryMkdir(srcFolder, groupFolder, probFolder);
+
+  const tmpl = path.resolve(cfg.get<string>('templates') || 'templates');
+  const tmplFolder = path.join(wsFolder.uri.fsPath, tmpl);
+  await generateSourceFile(prob, probFolder, tmplFolder);
+  await generateTestFiles(prob, probFolder);
+}
+
 async function parseContest(contest: Contest) {
   const probs: Problem[] = await getContestProblems(contest);
-  console.log(probs.length);
+  setLeftStatus(`Fetched ${probs.length} problems.`);
+  for (let i = 0; i < probs.length; ++i) {
+    await parseProblem(probs[i]);
+  }
+  // TODO: cannot promise all because mkdir
+  // await Promise.all(probs.map(prob => parseProblem(prob)));
 }
 
 export async function parseContestCommand() {

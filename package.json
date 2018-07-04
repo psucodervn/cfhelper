@@ -2,7 +2,7 @@
   "name": "cfhelper",
   "displayName": "CF Helper",
   "description": "Codeforces helper",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "psucoder",
   "license": "MIT",
   "engines": {
@@ -48,9 +48,21 @@
         "cfhelper": {
           "description": "CF Helper common settings",
           "default": {
-            "root": "src",
+            "src": "src",
             "out": "out",
-            "tmp": "tmp"
+            "tmp": "tmp",
+            "language": "c++14",
+            "templates": "templates"
+          }
+        },
+        "cfhelper.languages": {
+          "description": "CF Helper languages config map",
+          "default": {
+            "c++14": {
+              "main": "main",
+              "ext": "cpp",
+              "template": "main.cpp.tmpl"
+            }
           }
         }
       }
