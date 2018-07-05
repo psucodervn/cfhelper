@@ -11,6 +11,11 @@ const keys = {
   Cookie: 'cookie',
   Contests: 'contests',
   Language: 'language',
+  Languages: 'languages',
+  Src: 'src',
+  Templates: 'templates',
+  CFHelper: 'cfhelper',
+  Handle: 'handle',
 };
 const configs = {
   Common: 'cfhelper.common',
@@ -45,14 +50,14 @@ export async function initExtension(context: ExtensionContext) {
 }
 
 export function setLoggedUser(handle: string, cookie?: string) {
-  global.state.update('handle', handle);
+  global.state.update(keys.Handle, handle);
   if (cookie) { setCookie(cookie); }
   setRightStatus(`CF: Logged as ${handle}`);
   global.rightBarItem.command = 'extension.logout';
 }
 
 export function clearCredentials() {
-  global.state.update('handle', undefined);
+  global.state.update(keys.Handle, undefined);
   setCookie(undefined);
   setRightStatus(`CF: Not logged`);
   global.rightBarItem.command = 'extension.login';
@@ -117,9 +122,7 @@ async function tryMkdir(...folders: string[]) {
 }
 
 async function generateSourceFile(prob: Task, folder: string, tmplFolder: string, lang?: string) {
-  if (!lang) { lang = workspace.getConfiguration(configs.Common).get<string>('language') || 'c++14'; }
-  const langConfigs = workspace.getConfiguration(configs.Languages).get<LanguageConfig>(lang);
-  if (!langConfigs) { throw new Error(`Cannot find config for language ${lang}!`); }
+  const langConfigs = getLanguageConfigs(lang);
 
   let bf = '';
   try {
@@ -147,15 +150,15 @@ async function generateTestFiles(prob: Task, folder: string, lang?: string) {
 async function parseProblem(prob: Task) {
   if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) { return; }
   const wsFolder = workspace.workspaceFolders[0];
-  const cfg = workspace.getConfiguration('cfhelper');
+  const cfg = workspace.getConfiguration(keys.CFHelper);
 
-  const src = cfg.get<string>('src') || 'src';
+  const src = cfg.get<string>(keys.Src) || 'src';
   const srcFolder = path.resolve(path.join(wsFolder.uri.fsPath), src);
   const groupFolder = path.join(srcFolder, prob.group);
   const probFolder = path.join(groupFolder, prob.name);
   await tryMkdir(srcFolder, groupFolder, probFolder);
 
-  const tmpl = cfg.get<string>('templates') || 'templates';
+  const tmpl = cfg.get<string>(keys.Templates) || 'templates';
   const tmplFolder = path.resolve(path.join(wsFolder.uri.fsPath), tmpl);
   await generateSourceFile(prob, probFolder, tmplFolder);
   await generateTestFiles(prob, probFolder);
@@ -212,8 +215,14 @@ export async function loginCommand() {
   window.showInformationMessage('Login succeed.');
 }
 
+function getCurrentLanguage() {
+  let lang = global.state.get<string>(keys.Language);
+  if (lang) { return lang; }
+  return workspace.getConfiguration(configs.Common).get<string>('language') || 'c++14';
+}
+
 function getLanguageConfigs(lang?: string) {
-  if (!lang) { lang = workspace.getConfiguration(configs.Common).get<string>('language') || 'c++14'; }
+  if (!lang) { lang = getCurrentLanguage(); }
   const langConfigs = workspace.getConfiguration(configs.Languages).get<LanguageConfig>(lang);
   if (!langConfigs) { throw new Error(`Cannot find config for language ${lang}!`); }
   return langConfigs;
@@ -248,4 +257,15 @@ function extractProblemInfo(text: string) {
   }
   // TODO: add more matches
   return {};
+}
+
+export async function setLanguageCommand() {
+  const languages: any = workspace.getConfiguration(keys.CFHelper).get(keys.Languages);
+  if (!languages) { throw new Error('Cannot get languages from configuration.'); }
+  const format = (lang: string) => `${languages[lang].name} - ${lang}`;
+  const items = Object.keys(languages).map(format);
+  const res = await window.showQuickPick(items);
+  const chosen = Object.keys(languages).find(lang => format(lang) === res);
+  if (!chosen) { return; }
+  global.state.update(keys.Language, chosen);
 }

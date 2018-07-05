@@ -2,7 +2,7 @@
   "name": "cfhelper",
   "displayName": "CF Helper",
   "description": "Codeforces helper",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "publisher": "psucoder",
   "license": "MIT",
   "engines": {
@@ -39,6 +39,11 @@
       {
         "command": "extension.submit",
         "title": "Submit current file",
+        "category": "CF Helper"
+      },
+      {
+        "command": "extension.setLanguage",
+        "title": "Set language",
         "category": "CF Helper"
       }
     ],
