@@ -2,7 +2,7 @@
 
 import { window, workspace, ExtensionContext, StatusBarAlignment } from 'vscode';
 import { getContestList, getContestProblems, login, loggedAs, submitContestProblem } from './api';
-import { Contest, Problem, Global, LanguageConfig } from './interfaces';
+import { Contest, Task, Global, LanguageConfig } from './interfaces';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -13,7 +13,7 @@ const keys = {
   Language: 'language',
 };
 const configs = {
-  Common: 'cfhelper',
+  Common: 'cfhelper.common',
   Languages: 'cfhelper.languages'
 };
 
@@ -92,7 +92,7 @@ async function chooseContest(): Promise<Contest | undefined> {
     global.contests = await fetchContestList();
   }
   while (!contest) {
-    const contestNames = global.contests.map(c => c.name);
+    const contestNames = global.contests.map(c => `${c.id} - ${c.name}`);
     contestNames.unshift(keys.Reload);
     const name = await window.showQuickPick(contestNames);
     if (!name) { return; }
@@ -100,7 +100,7 @@ async function chooseContest(): Promise<Contest | undefined> {
       await fetchContestList();
       continue;
     }
-    contest = global.contests.find(c => c.name === name);
+    contest = global.contests.find(c => `${c.id} - ${c.name}` === name);
   }
   return contest;
 }
@@ -116,22 +116,27 @@ async function tryMkdir(...folders: string[]) {
   }
 }
 
-async function generateSourceFile(prob: Problem, folder: string, tmplFolder: string, lang?: string) {
+async function generateSourceFile(prob: Task, folder: string, tmplFolder: string, lang?: string) {
   if (!lang) { lang = workspace.getConfiguration(configs.Common).get<string>('language') || 'c++14'; }
   const langConfigs = workspace.getConfiguration(configs.Languages).get<LanguageConfig>(lang);
   if (!langConfigs) { throw new Error(`Cannot find config for language ${lang}!`); }
 
-  let bf = await fs.readFileSync(path.join(tmplFolder, langConfigs.template)).toString();
+  let bf = '';
+  try {
+    bf = await fs.readFileSync(path.join(tmplFolder, langConfigs.template)).toString();
+  } catch (e) {
+    console.error('generateSourceFile:', e);
+    setLeftStatus(e.toString());
+    throw new Error(`Cannot read template for language ${lang}`);
+  }
   bf = bf.replace('__PROB_NAME__', prob.name);
   bf = bf.replace('__PROB_URL__', prob.url);
 
   await fs.writeFileSync(path.join(folder, `${langConfigs.main}.${langConfigs.ext}`), bf);
 }
 
-async function generateTestFiles(prob: Problem, folder: string, lang?: string) {
-  if (!lang) { lang = workspace.getConfiguration(configs.Common).get<string>('language') || 'c++14'; }
-  const langConfigs = workspace.getConfiguration(configs.Languages).get<LanguageConfig>(lang);
-  if (!langConfigs) { throw new Error(`Cannot find config for language ${lang}!`); }
+async function generateTestFiles(prob: Task, folder: string, lang?: string) {
+  const langConfigs = getLanguageConfigs(lang);
 
   await Promise.all(prob.tests.map(async test => {
     await fs.writeFileSync(path.join(folder, `${langConfigs.main}.${test.id}.in`), test.input);
@@ -139,25 +144,25 @@ async function generateTestFiles(prob: Problem, folder: string, lang?: string) {
   }));
 }
 
-async function parseProblem(prob: Problem) {
-  if (!workspace.workspaceFolders) { return; }
+async function parseProblem(prob: Task) {
+  if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) { return; }
   const wsFolder = workspace.workspaceFolders[0];
   const cfg = workspace.getConfiguration('cfhelper');
 
-  const src = path.resolve(cfg.get<string>('src') || 'src');
-  const srcFolder = path.join(wsFolder.uri.fsPath, src);
+  const src = cfg.get<string>('src') || 'src';
+  const srcFolder = path.resolve(path.join(wsFolder.uri.fsPath), src);
   const groupFolder = path.join(srcFolder, prob.group);
   const probFolder = path.join(groupFolder, prob.name);
   await tryMkdir(srcFolder, groupFolder, probFolder);
 
-  const tmpl = path.resolve(cfg.get<string>('templates') || 'templates');
-  const tmplFolder = path.join(wsFolder.uri.fsPath, tmpl);
+  const tmpl = cfg.get<string>('templates') || 'templates';
+  const tmplFolder = path.resolve(path.join(wsFolder.uri.fsPath), tmpl);
   await generateSourceFile(prob, probFolder, tmplFolder);
   await generateTestFiles(prob, probFolder);
 }
 
 async function parseContest(contest: Contest) {
-  const probs: Problem[] = await getContestProblems(contest);
+  const probs: Task[] = await getContestProblems(contest);
   setLeftStatus(`Fetched ${probs.length} problems.`);
   for (let i = 0; i < probs.length; ++i) {
     await parseProblem(probs[i]);
@@ -207,6 +212,13 @@ export async function loginCommand() {
   window.showInformationMessage('Login succeed.');
 }
 
+function getLanguageConfigs(lang?: string) {
+  if (!lang) { lang = workspace.getConfiguration(configs.Common).get<string>('language') || 'c++14'; }
+  const langConfigs = workspace.getConfiguration(configs.Languages).get<LanguageConfig>(lang);
+  if (!langConfigs) { throw new Error(`Cannot find config for language ${lang}!`); }
+  return langConfigs;
+}
+
 export async function submitCommand() {
   const editor = window.activeTextEditor;
   if (!editor) { return; }
@@ -216,12 +228,16 @@ export async function submitCommand() {
   const code = doc.getText();
   const { contestId, problemId } = extractProblemInfo(code);
   if (!contestId || !problemId) {
-    window.showErrorMessage('Cannot detect contest and/or problem id from current file.');
+    window.showErrorMessage(`Cannot detect contest id and/or problem id from current file.
+Your code doesn\'t contain a link to problem page.
+Did you miss __PROB_URL__ field in your template?`);
     return;
   }
 
+  const langConfigs = getLanguageConfigs();
+
   setLeftStatus('Submitting...');
-  await submitContestProblem(code, contestId, problemId);
+  await submitContestProblem(code, contestId, problemId, langConfigs.id);
   setLeftStatus('Submit succeed.');
 }
 

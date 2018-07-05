@@ -2,7 +2,7 @@
   "name": "cfhelper",
   "displayName": "CF Helper",
   "description": "Codeforces helper",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "publisher": "psucoder",
   "license": "MIT",
   "engines": {
@@ -45,7 +45,7 @@
     "configuration": {
       "title": "CF Helper configuration",
       "properties": {
-        "cfhelper": {
+        "cfhelper.common": {
           "description": "CF Helper common settings",
           "default": {
             "src": "src",
@@ -59,9 +59,39 @@
           "description": "CF Helper languages config map",
           "default": {
             "c++14": {
+              "id": 50,
+              "name": "GNU G++14 6.4.0",
               "main": "main",
               "ext": "cpp",
               "template": "main.cpp.tmpl"
+            },
+            "py2": {
+              "id": 7,
+              "name": "Python 2.7",
+              "main": "main",
+              "ext": "py",
+              "template": "main.py2.tmpl"
+            },
+            "py3": {
+              "id": 31,
+              "name": "Python 3.6",
+              "main": "main",
+              "ext": "py",
+              "template": "main.py3.tmpl"
+            },
+            "pypy2": {
+              "id": 40,
+              "name": "PyPy 2.7 (6.0.0)",
+              "main": "main",
+              "ext": "py",
+              "template": "main.pypy2.tmpl"
+            },
+            "pypy3": {
+              "id": 41,
+              "name": "PyPy 3.5 (6.0.0)",
+              "main": "main",
+              "ext": "py",
+              "template": "main.pypy3.tmpl"
             }
           }
         }

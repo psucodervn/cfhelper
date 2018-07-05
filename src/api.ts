@@ -3,7 +3,7 @@
 import fetch, { Headers } from 'node-fetch';
 import * as cheerio from 'cheerio';
 import * as fs from 'fs';
-import { Response, Contest, Problem, Test } from './interfaces';
+import { Response, Contest, Task, Test, Submission } from './interfaces';
 import { setLeftStatus, getCookie } from './commands';
 
 const HOST = 'http://codeforces.com';
@@ -58,7 +58,7 @@ export async function getContestProblems(contest: Contest) {
   const nodes = $('.problem-statement').toArray();
   console.info(`Found ${nodes.length} problems`);
 
-  const probs: Problem[] = nodes.map((node) => {
+  const probs: Task[] = nodes.map((node) => {
     const stmt = $(node);
 
     // name
@@ -192,7 +192,7 @@ export async function loggedAs() {
   }
 }
 
-export async function submitContestProblem(code: string, contestId: string, problemId: string) {
+export async function submitContestProblem(code: string, contestId: string, problemId: string, languageId: number) {
   let url = `http://codeforces.com/contest/${contestId}/submit`;
   const { csrfToken } = await getCsrfToken(url, true);
   if (!csrfToken) {
@@ -208,7 +208,7 @@ export async function submitContestProblem(code: string, contestId: string, prob
     csrf_token: csrfToken,
     action: 'submitSolutionFormSubmitted',
     submittedProblemIndex: problemId,
-    programTypeId: 50, // TODO: add more languages
+    programTypeId: languageId,
     source: code,
   };
 
@@ -222,4 +222,10 @@ export async function submitContestProblem(code: string, contestId: string, prob
   if (html.includes('You have submitted exactly the same code before')) {
     throw new Error('You have submitted exactly the same code before.');
   }
+}
+
+export async function getSubmissions(handle: string, from: number = 1, count: number = 10) {
+  const url = `/api/user.status?handle=${handle}&from=${from}&count=${count}`;
+  const data: Response<Submission> = await getJSON(url, 'submissions');
+  return data.result;
 }
