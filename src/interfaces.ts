@@ -1,4 +1,5 @@
 import { Memento, ExtensionContext, StatusBarItem } from "vscode";
+import { SubmissionMonitor } from "./monitor";
 
 export interface Contest {
   id: number;
@@ -21,11 +22,11 @@ export interface Contest {
 }
 
 export enum ContestType {
-  CF, IOI, ICPC,
+  CF = 'CF', IOI = 'IOI', ICPC = 'ICPC',
 }
 
 export enum ContestPhase {
-  BEFORE, CODING, PENDING_SYSTEM_TEST, SYSTEM_TEST, FINISHED,
+  BEFORE = 'BEFORE', CODING = 'CODING', PENDING_SYSTEM_TEST = 'PENDING_SYSTEM_TEST', SYSTEM_TEST = 'SYSTEM_TEST', FINISHED = 'FINISHED',
 }
 
 export interface Response<T> {
@@ -72,6 +73,7 @@ export interface Global {
   rightBarItem: StatusBarItem;
   contests: Contest[];
   state: Memento;
+  monitor: SubmissionMonitor;
 }
 
 export interface LanguageConfig {
@@ -87,18 +89,18 @@ export interface LanguageConfigs {
 }
 
 export enum Verdict {
-  FAILED, OK, PARTIAL, COMPILATION_ERROR,
-  RUNTIME_ERROR, WRONG_ANSWER, PRESENTATION_ERROR,
-  TIME_LIMIT_EXCEEDED, MEMORY_LIMIT_EXCEEDED, 
-  IDLENESS_LIMIT_EXCEEDED, SECURITY_VIOLATED, 
-  CRASHED, INPUT_PREPARATION_CRASHED, CHALLENGED, 
-  SKIPPED, TESTING, REJECTED,
+  FAILED = 'FAILED', OK = 'OK', PARTIAL = 'PARTIAL', COMPILATION_ERROR = 'COMPILATION_ERROR',
+  RUNTIME_ERROR = 'RUNTIME_ERROR', WRONG_ANSWER = 'WRONG_ANSWER', PRESENTATION_ERROR = 'PRESENTATION_ERROR',
+  TIME_LIMIT_EXCEEDED = 'TIME_LIMIT_EXCEEDED', MEMORY_LIMIT_EXCEEDED = 'MEMORY_LIMIT_EXCEEDED', 
+  IDLENESS_LIMIT_EXCEEDED = 'IDLENESS_LIMIT_EXCEEDED', SECURITY_VIOLATED = 'SECURITY_VIOLATED', 
+  CRASHED = 'CRASHED', INPUT_PREPARATION_CRASHED = 'INPUT_PREPARATION_CRASHED', CHALLENGED = 'CHALLENGED', 
+  SKIPPED = 'SKIPPED', TESTING = 'TESTING', REJECTED = 'REJECTED',
 }
 
 export enum TestSet {
-  SAMPLES, PRETESTS, TESTS, CHALLENGES,
-  TESTS1, TESTS2, TESTS3, TESTS4, TESTS5,
-  TESTS6, TESTS7, TESTS8, TESTS9, TESTS10,
+  SAMPLES = 'SAMPLES', PRETESTS = 'PRETESTS', TESTS = 'TESTS', CHALLENGES = 'CHALLENGES',
+  TESTS1 = 'TESTS1', TESTS2 = 'TESTS2', TESTS3 = 'TESTS3', TESTS4 = 'TESTS4', TESTS5 = 'TESTS5',
+  TESTS6 = 'TESTS6', TESTS7 = 'TESTS7', TESTS8 = 'TESTS8', TESTS9 = 'TESTS9', TESTS10 = 'TESTS10',
 }
 
 export interface Submission {
@@ -117,7 +119,7 @@ export interface Submission {
 }
 
 export enum ProblemType {
-  PROGRAMMING, QUESTION,
+  PROGRAMMING = 'PROGRAMMING', QUESTION = 'QUESTION',
 }
 
 export interface Problem {

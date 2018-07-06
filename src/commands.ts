@@ -3,24 +3,10 @@
 import * as path from 'path';
 import { ExtensionContext, StatusBarAlignment, window, workspace } from 'vscode';
 import { getContestList, getContestProblems, loggedAs, login, submitContestProblem } from './api';
-import { Contest, Global, LanguageConfig, Task } from './interfaces';
+import { Contest, Global, LanguageConfig, Task, LanguageConfigs } from './interfaces';
 import { extractProblemInfo, generateSourceFile, generateTestCases, generateSampleTemplates, mkDirRecursive } from './utils';
-
-const keys = {
-  Reload: '# Reload List...',
-  Cookie: 'cookie',
-  Contests: 'contests',
-  Language: 'language',
-  Languages: 'languages',
-  Src: 'src',
-  Templates: 'templates',
-  CFHelper: 'cfhelper',
-  Handle: 'handle',
-};
-const configs = {
-  Common: 'cfhelper.common',
-  Languages: 'cfhelper.languages'
-};
+import { SubmissionMonitor } from './monitor';
+import { keys, configs } from './constants';
 
 let global: Global;
 
@@ -36,6 +22,7 @@ export async function initExtension(context: ExtensionContext) {
     rightBarItem,
     contests: [],
     state: context.workspaceState,
+    monitor: new SubmissionMonitor(),
   };
 
   try {
@@ -48,6 +35,14 @@ export async function initExtension(context: ExtensionContext) {
     if (handle) { setLoggedUser(handle); }
     else { clearCredentials(); }
   });
+
+  if (getConfigWithDefault<boolean>(configs.AutoStartMonitor, true)) {
+    await startMonitorCommand();
+  }
+}
+
+export async function updateExtension(affectsConfiguration: (section: string) => boolean) {
+
 }
 
 export function setLoggedUser(handle: string, cookie?: string) {
@@ -113,15 +108,14 @@ async function chooseContest(): Promise<Contest | undefined> {
 
 async function parseProblem(prob: Task) {
   const wsFolder = getWorkspaceFolder();
-  const cfg = wsConfig();
 
-  const src = cfg.get<string>(keys.Src) || 'src';
+  const src = getConfigWithDefault<string>(configs.Src, 'src');
   const srcFolder = path.resolve(wsFolder.uri.fsPath, src);
   const groupFolder = path.join(srcFolder, prob.group);
   const probFolder = path.join(groupFolder, prob.name);
   await mkDirRecursive(srcFolder, groupFolder, probFolder);
 
-  const tmpl = cfg.get<string>(keys.Templates) || 'templates';
+  const tmpl = getConfigWithDefault<string>(configs.Templates, 'templates');
   const tmplFolder = path.resolve(wsFolder.uri.fsPath, tmpl);
 
   const langConfig = getLanguageConfig();
@@ -181,9 +175,9 @@ export async function loginCommand() {
 }
 
 function getCurrentLanguage() {
-  let lang = global.state.get<string>(keys.Language);
+  const lang = global.state.get<string>(keys.Language);
   if (lang) { return lang; }
-  return workspace.getConfiguration(configs.Common).get<string>(keys.Language) || 'cpp14';
+  return getConfigWithDefault<string>(configs.Language, 'cpp14');
 }
 
 function getLanguageConfig(lang?: string) {
@@ -208,19 +202,29 @@ Did you miss __PROB_URL__ field in your template?`);
     return;
   }
 
-  const langConfigs = getLanguageConfig();
+  const langConfigs = getLanguageConfig(info.language);
 
   setLeftStatus('Submitting...');
   await submitContestProblem(code, info.contestId, info.problemId, langConfigs.id);
   setLeftStatus('Submit succeed.');
+
+  setTimeout(global.monitor.fetchSubmissions, 1000);
 }
 
-export function wsConfig() {
-  return workspace.getConfiguration(keys.CFHelper);
+export function getConfig<T>(key: string, defaultValue?: T) {
+  const res = workspace.getConfiguration().get<T>(key);
+  if (res === undefined) { return defaultValue; }
+  return res;
+}
+
+export function getConfigWithDefault<T>(key: string, defaultValue: T) {
+  const res = workspace.getConfiguration().get<T>(key);
+  if (res === undefined) { return defaultValue; }
+  return res;
 }
 
 export async function setLanguageCommand() {
-  const languages: any = wsConfig().get(keys.Languages);
+  const languages: any = getConfig<LanguageConfigs>(configs.Languages);
   if (!languages) { throw new Error('Cannot get languages from configuration.'); }
   const format = (lang: string) => `${languages[lang].name} - ${lang}`;
   const items = Object.keys(languages).map(format);
@@ -244,9 +248,22 @@ function getWorkspacePath() {
 export async function generateSampleTemplatesCommand() {
   // const res = await window.showWarningMessage('Your current templates will be override. Do you want to continue?', 'Yes', 'No');
   // if (res !== 'Yes') { return; }
-  let tmpl = wsConfig().get<string>(keys.Templates) || 'templates';
+  let tmpl = getConfigWithDefault<string>(configs.Templates, 'templates');
   tmpl = path.join(getWorkspacePath(), tmpl);
-  const languages: any = wsConfig().get(keys.Languages);
+  const languages: any = getConfig<LanguageConfigs>(configs.Languages);
   if (!languages) { throw new Error('Cannot get languages from configuration.'); }
   await generateSampleTemplates(tmpl, languages);
+}
+
+export async function startMonitorCommand() {
+  const handle = global.state.get<string>(keys.Handle);
+  if (!handle) {
+    throw new Error('You must login to monitor submissions.');
+  }
+  global.monitor.changeHandle(handle);
+  await global.monitor.start();
+}
+
+export function stopMonitorCommand() {
+  global.monitor.stop();
 }
