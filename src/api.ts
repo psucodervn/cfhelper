@@ -8,23 +8,23 @@ import { setLeftStatus, getCookie } from './commands';
 
 const HOST = 'http://codeforces.com';
 
-async function getResponse(url: string, title: string = '', useCookie: boolean = true, cookie: string = '') {
+async function getResponse(url: string, title?: string, useCookie: boolean = true, cookie: string = '') {
   if (useCookie && !cookie) { cookie = getCookie(true); }
-  setLeftStatus(`Fetching ${title}...`);
+  if (title) { setLeftStatus(`Fetching ${title}...`); }
   const res = await fetch(url.startsWith('http') ? url : `${HOST}${url}`, {
     headers: { cookie },
     follow: 1,
   });
-  setLeftStatus(`Fetching ${title}: done.`);
+  if (title) { setLeftStatus(`Fetching ${title}: done.`); }
   return res;
 }
 
-async function getHTML(url: string, title: string = '', useCookie: boolean = true) {
+async function getHTML(url: string, title?: string, useCookie: boolean = true) {
   const resp = await getResponse(url, title, useCookie);
   return await resp.text();
 }
 
-async function getJSON(url: string, title: string = '', useCookie: boolean = true) {
+async function getJSON(url: string, title?: string, useCookie: boolean = true) {
   const resp = await getResponse(url, title, useCookie);
   return await resp.json();
 }
@@ -224,7 +224,7 @@ export async function submitContestProblem(code: string, contestId: string, prob
   }
 }
 
-export async function getSubmissions(handle: string, from: number = 1, count: number = 10) {
+export async function getSubmissions(handle: string, from: number = 1, count: number = 10): Promise<Submission[]> {
   const url = `/api/user.status?handle=${handle}&from=${from}&count=${count}`;
   const data: Response<Submission> = await getJSON(url, 'submissions');
   return data.result;

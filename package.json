@@ -2,7 +2,7 @@
   "name": "cfhelper",
   "displayName": "CF Helper",
   "description": "Codeforces helper",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "publisher": "psucoder",
   "license": "MIT",
   "engines": {
@@ -50,20 +50,35 @@
         "command": "extension.generateSampleTemplates",
         "title": "Generate sample templates",
         "category": "CF Helper"
+      },
+      {
+        "command": "extension.startMonitor",
+        "title": "Start submission monitor",
+        "category": "CF Helper"
+      },
+      {
+        "command": "extension.stopMonitor",
+        "title": "Stop submission monitor",
+        "category": "CF Helper"
       }
     ],
     "configuration": {
       "title": "CF Helper configuration",
       "properties": {
-        "cfhelper.common": {
-          "description": "CF Helper common settings",
+        "cfhelper.dirs": {
+          "description": "CF Helper directory settings",
           "default": {
             "src": "src",
-            "out": "out",
-            "tmp": "tmp",
-            "language": "cpp14",
             "templates": "templates"
           }
+        },
+        "cfhelper.language": {
+          "description": "Programming language to be use in CF Helper",
+          "default": "cpp14"
+        },
+        "cfhelper.autoStartMonitor": {
+          "description": "Auto start submission monitor",
+          "default": "true"
         },
         "cfhelper.languages": {
           "description": "CF Helper languages config map",
