@@ -145,3 +145,9 @@ export interface Party {
   room?: number;
   startTimeSeconds: number;
 }
+
+export interface ProblemInfo {
+  contestId: string;
+  problemId: string;
+  language?: string;
+}

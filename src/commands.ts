@@ -4,7 +4,7 @@ import * as path from 'path';
 import { ExtensionContext, StatusBarAlignment, window, workspace } from 'vscode';
 import { getContestList, getContestProblems, loggedAs, login, submitContestProblem } from './api';
 import { Contest, Global, LanguageConfig, Task } from './interfaces';
-import { extractProblemInfo, generateSourceFile, generateTestFiles, generateSampleTemplates, mkDirRecursive } from './utils';
+import { extractProblemInfo, generateSourceFile, generateTestCases, generateSampleTemplates, mkDirRecursive } from './utils';
 
 const keys = {
   Reload: '# Reload List...',
@@ -29,7 +29,7 @@ export async function initExtension(context: ExtensionContext) {
   rightBarItem.show();
   const leftBarItem = window.createStatusBarItem(StatusBarAlignment.Left);
   leftBarItem.show();
-  
+
   global = {
     context,
     leftBarItem,
@@ -125,8 +125,8 @@ async function parseProblem(prob: Task) {
   const tmplFolder = path.resolve(wsFolder.uri.fsPath, tmpl);
 
   const langConfig = getLanguageConfig();
-  await generateSourceFile(prob, probFolder, tmplFolder, langConfig);
-  await generateTestFiles(prob, probFolder, langConfig);
+  await generateSourceFile(prob, probFolder, tmplFolder, langConfig, getCurrentLanguage());
+  await generateTestCases(prob, probFolder, langConfig);
 }
 
 async function parseContest(contest: Contest) {
@@ -200,8 +200,8 @@ export async function submitCommand() {
   if (doc.isDirty || doc.isUntitled) { await doc.save(); }
 
   const code = doc.getText();
-  const { contestId, problemId } = extractProblemInfo(code);
-  if (!contestId || !problemId) {
+  const info = extractProblemInfo(code);
+  if (!info) {
     window.showErrorMessage(`Cannot detect contest id and/or problem id from current file.
 Your code doesn\'t contain a link to problem page.
 Did you miss __PROB_URL__ field in your template?`);
@@ -211,7 +211,7 @@ Did you miss __PROB_URL__ field in your template?`);
   const langConfigs = getLanguageConfig();
 
   setLeftStatus('Submitting...');
-  await submitContestProblem(code, contestId, problemId, langConfigs.id);
+  await submitContestProblem(code, info.contestId, info.problemId, langConfigs.id);
   setLeftStatus('Submit succeed.');
 }
 

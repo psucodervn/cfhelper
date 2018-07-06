@@ -2,20 +2,32 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { LanguageConfig, Task, LanguageConfigs } from "./interfaces";
+import { LanguageConfig, Task, LanguageConfigs, ProblemInfo } from "./interfaces";
 import { setLeftStatus } from './commands';
 import templateCodes from './templates';
 
-export function extractProblemInfo(text: string) {
-  let matches = text.match(/codeforces.com\/contest\/([^/]+)\/problem\/(\S+)/);
-  if (matches && matches.length >= 2) {
-    return { contestId: matches[1], problemId: matches[2] };
-  }
-  // TODO: add more matches
-  return {};
+function regexMatchOne(text: string, regex: RegExp): string | undefined {
+  const matches = text.match(regex);
+  if (matches && matches.length >= 2) { return matches[1]; }
+  return undefined;
 }
 
-export async function generateSourceFile(prob: Task, folder: string, tmplFolder: string, langConfig: LanguageConfig) {
+export function extractProblemInfo(text: string): ProblemInfo | undefined {
+  const language = regexMatchOne(text, /Lang:\s*(\S+)/);
+  let contestId, problemId;
+
+  let matches = text.match(/codeforces.com\/contest\/([^/]+)\/problem\/(\S+)/);
+
+  if (matches && matches.length >= 2) {
+    contestId = matches[1];
+    problemId = matches[2];
+    return { contestId, problemId, language };
+  }
+  // TODO: add more matches
+  return undefined;
+}
+
+export async function generateSourceFile(prob: Task, folder: string, tmplFolder: string, langConfig: LanguageConfig, lang: string) {
   let bf = '';
   try {
     bf = fs.readFileSync(path.join(tmplFolder, langConfig.template)).toString();
@@ -26,6 +38,7 @@ export async function generateSourceFile(prob: Task, folder: string, tmplFolder:
   }
   bf = bf.replace('__PROB_NAME__', prob.name);
   bf = bf.replace('__PROB_URL__', prob.url);
+  bf = bf.replace('__LANG__', lang);
 
   fs.writeFileSync(path.join(folder, `${langConfig.main}.${langConfig.ext}`), bf);
 }
@@ -40,7 +53,7 @@ export async function mkDirRecursive(...folders: string[]) {
   }
 }
 
-export async function generateTestFiles(prob: Task, folder: string, langConfig: LanguageConfig) {
+export async function generateTestCases(prob: Task, folder: string, langConfig: LanguageConfig) {
   await Promise.all(prob.tests.map(test => {
     fs.writeFileSync(path.join(folder, `${langConfig.main}.${test.id}.in`), test.input);
     fs.writeFileSync(path.join(folder, `${langConfig.main}.${test.id}.ans`), test.output);
