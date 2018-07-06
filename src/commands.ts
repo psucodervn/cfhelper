@@ -29,6 +29,7 @@ export async function initExtension(context: ExtensionContext) {
   rightBarItem.show();
   const leftBarItem = window.createStatusBarItem(StatusBarAlignment.Left);
   leftBarItem.show();
+  
   global = {
     context,
     leftBarItem,
@@ -40,7 +41,7 @@ export async function initExtension(context: ExtensionContext) {
   try {
     global.contests = JSON.parse(global.state.get(keys.Contests) as string);
   } catch (e) {
-    console.log('get contests from state:', e);
+    console.warn('get contests from state:', e.toString());
   }
 
   loggedAs().then(handle => {
