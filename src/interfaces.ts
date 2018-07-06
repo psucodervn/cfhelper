@@ -82,6 +82,10 @@ export interface LanguageConfig {
   template: string;
 }
 
+export interface LanguageConfigs {
+  [lang: string]: LanguageConfig;
+}
+
 export enum Verdict {
   FAILED, OK, PARTIAL, COMPILATION_ERROR,
   RUNTIME_ERROR, WRONG_ANSWER, PRESENTATION_ERROR,

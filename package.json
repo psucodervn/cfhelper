@@ -45,6 +45,11 @@
         "command": "extension.setLanguage",
         "title": "Set language",
         "category": "CF Helper"
+      },
+      {
+        "command": "extension.generateSampleTemplates",
+        "title": "Generate sample templates",
+        "category": "CF Helper"
       }
     ],
     "configuration": {
@@ -56,19 +61,19 @@
             "src": "src",
             "out": "out",
             "tmp": "tmp",
-            "language": "c++14",
+            "language": "cpp14",
             "templates": "templates"
           }
         },
         "cfhelper.languages": {
           "description": "CF Helper languages config map",
           "default": {
-            "c++14": {
+            "cpp14": {
               "id": 50,
               "name": "GNU G++14 6.4.0",
               "main": "main",
               "ext": "cpp",
-              "template": "main.cpp.tmpl"
+              "template": "main.cpp14.tmpl"
             },
             "py2": {
               "id": 7,

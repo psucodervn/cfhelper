@@ -1,10 +1,10 @@
 'use strict';
 
-import { window, workspace, ExtensionContext, StatusBarAlignment } from 'vscode';
-import { getContestList, getContestProblems, login, loggedAs, submitContestProblem } from './api';
-import { Contest, Task, Global, LanguageConfig } from './interfaces';
 import * as path from 'path';
-import * as fs from 'fs';
+import { ExtensionContext, StatusBarAlignment, window, workspace } from 'vscode';
+import { getContestList, getContestProblems, loggedAs, login, submitContestProblem } from './api';
+import { Contest, Global, LanguageConfig, Task } from './interfaces';
+import { extractProblemInfo, generateSourceFile, generateTestFiles, generateSampleTemplates, mkDirRecursive } from './utils';
 
 const keys = {
   Reload: '# Reload List...',
@@ -110,58 +110,22 @@ async function chooseContest(): Promise<Contest | undefined> {
   return contest;
 }
 
-async function tryMkdir(...folders: string[]) {
-  for (let i = 0; i < folders.length; ++i) {
-    const fd = folders[i];
-    if (!(await fs.existsSync(fd))) {
-      await fs.mkdirSync(fd);
-      continue;
-    }
-    // TODO: check if not directory
-  }
-}
-
-async function generateSourceFile(prob: Task, folder: string, tmplFolder: string, lang?: string) {
-  const langConfigs = getLanguageConfigs(lang);
-
-  let bf = '';
-  try {
-    bf = await fs.readFileSync(path.join(tmplFolder, langConfigs.template)).toString();
-  } catch (e) {
-    console.error('generateSourceFile:', e);
-    setLeftStatus(e.toString());
-    throw new Error(`Cannot read template for language ${lang}`);
-  }
-  bf = bf.replace('__PROB_NAME__', prob.name);
-  bf = bf.replace('__PROB_URL__', prob.url);
-
-  await fs.writeFileSync(path.join(folder, `${langConfigs.main}.${langConfigs.ext}`), bf);
-}
-
-async function generateTestFiles(prob: Task, folder: string, lang?: string) {
-  const langConfigs = getLanguageConfigs(lang);
-
-  await Promise.all(prob.tests.map(async test => {
-    await fs.writeFileSync(path.join(folder, `${langConfigs.main}.${test.id}.in`), test.input);
-    await fs.writeFileSync(path.join(folder, `${langConfigs.main}.${test.id}.ans`), test.output);
-  }));
-}
-
 async function parseProblem(prob: Task) {
-  if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) { return; }
-  const wsFolder = workspace.workspaceFolders[0];
-  const cfg = workspace.getConfiguration(keys.CFHelper);
+  const wsFolder = getWorkspaceFolder();
+  const cfg = wsConfig();
 
   const src = cfg.get<string>(keys.Src) || 'src';
-  const srcFolder = path.resolve(path.join(wsFolder.uri.fsPath), src);
+  const srcFolder = path.resolve(wsFolder.uri.fsPath, src);
   const groupFolder = path.join(srcFolder, prob.group);
   const probFolder = path.join(groupFolder, prob.name);
-  await tryMkdir(srcFolder, groupFolder, probFolder);
+  await mkDirRecursive(srcFolder, groupFolder, probFolder);
 
   const tmpl = cfg.get<string>(keys.Templates) || 'templates';
-  const tmplFolder = path.resolve(path.join(wsFolder.uri.fsPath), tmpl);
-  await generateSourceFile(prob, probFolder, tmplFolder);
-  await generateTestFiles(prob, probFolder);
+  const tmplFolder = path.resolve(wsFolder.uri.fsPath, tmpl);
+
+  const langConfig = getLanguageConfig();
+  await generateSourceFile(prob, probFolder, tmplFolder, langConfig);
+  await generateTestFiles(prob, probFolder, langConfig);
 }
 
 async function parseContest(contest: Contest) {
@@ -218,10 +182,10 @@ export async function loginCommand() {
 function getCurrentLanguage() {
   let lang = global.state.get<string>(keys.Language);
   if (lang) { return lang; }
-  return workspace.getConfiguration(configs.Common).get<string>('language') || 'c++14';
+  return workspace.getConfiguration(configs.Common).get<string>(keys.Language) || 'cpp14';
 }
 
-function getLanguageConfigs(lang?: string) {
+function getLanguageConfig(lang?: string) {
   if (!lang) { lang = getCurrentLanguage(); }
   const langConfigs = workspace.getConfiguration(configs.Languages).get<LanguageConfig>(lang);
   if (!langConfigs) { throw new Error(`Cannot find config for language ${lang}!`); }
@@ -243,24 +207,19 @@ Did you miss __PROB_URL__ field in your template?`);
     return;
   }
 
-  const langConfigs = getLanguageConfigs();
+  const langConfigs = getLanguageConfig();
 
   setLeftStatus('Submitting...');
   await submitContestProblem(code, contestId, problemId, langConfigs.id);
   setLeftStatus('Submit succeed.');
 }
 
-function extractProblemInfo(text: string) {
-  let matches = text.match(/codeforces.com\/contest\/([^/]+)\/problem\/(\S+)/);
-  if (matches && matches.length >= 2) {
-    return { contestId: matches[1], problemId: matches[2] };
-  }
-  // TODO: add more matches
-  return {};
+export function wsConfig() {
+  return workspace.getConfiguration(keys.CFHelper);
 }
 
 export async function setLanguageCommand() {
-  const languages: any = workspace.getConfiguration(keys.CFHelper).get(keys.Languages);
+  const languages: any = wsConfig().get(keys.Languages);
   if (!languages) { throw new Error('Cannot get languages from configuration.'); }
   const format = (lang: string) => `${languages[lang].name} - ${lang}`;
   const items = Object.keys(languages).map(format);
@@ -268,4 +227,25 @@ export async function setLanguageCommand() {
   const chosen = Object.keys(languages).find(lang => format(lang) === res);
   if (!chosen) { return; }
   global.state.update(keys.Language, chosen);
+}
+
+function getWorkspaceFolder() {
+  if (!workspace.workspaceFolders) {
+    throw new Error('Cannot get workspace folder.');
+  }
+  return workspace.workspaceFolders[0];
+}
+
+function getWorkspacePath() {
+  return getWorkspaceFolder().uri.fsPath;
+}
+
+export async function generateSampleTemplatesCommand() {
+  // const res = await window.showWarningMessage('Your current templates will be override. Do you want to continue?', 'Yes', 'No');
+  // if (res !== 'Yes') { return; }
+  let tmpl = wsConfig().get<string>(keys.Templates) || 'templates';
+  tmpl = path.join(getWorkspacePath(), tmpl);
+  const languages: any = wsConfig().get(keys.Languages);
+  if (!languages) { throw new Error('Cannot get languages from configuration.'); }
+  await generateSampleTemplates(tmpl, languages);
 }

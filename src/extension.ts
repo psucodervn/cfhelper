@@ -3,7 +3,7 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 
-import { parseContestCommand, loginCommand, initExtension, submitCommand, logoutCommand, setLanguageCommand } from './commands';
+import { parseContestCommand, loginCommand, initExtension, submitCommand, logoutCommand, setLanguageCommand, generateSampleTemplatesCommand } from './commands';
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -27,6 +27,8 @@ export async function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(cmdSubmit);
 	let cmdSetLanguage = vscode.commands.registerCommand('extension.setLanguage', setLanguageCommand);
 	context.subscriptions.push(cmdSetLanguage);
+	let cmdGenerateSampleTemplates = vscode.commands.registerCommand('extension.generateSampleTemplates', generateSampleTemplatesCommand);
+	context.subscriptions.push(cmdGenerateSampleTemplates);
 }
 
 // this method is called when your extension is deactivated
