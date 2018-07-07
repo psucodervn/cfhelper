@@ -27,9 +27,7 @@ export async function initExtension(context: ExtensionContext) {
 
   try {
     global.contests = JSON.parse(global.state.get(keys.Contests) as string);
-  } catch (e) {
-    console.warn('get contests from state:', e.toString());
-  }
+  } catch (e) {}
 
   loggedAs().then(handle => {
     if (handle) { setLoggedUser(handle); }
@@ -37,7 +35,9 @@ export async function initExtension(context: ExtensionContext) {
   });
 
   if (getConfigWithDefault<boolean>(configs.AutoStartMonitor, true)) {
-    await startMonitorCommand();
+    if (process.env.NODE_ENV !== 'test') {
+      await startMonitorCommand();
+    }
   }
 }
 

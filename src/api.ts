@@ -3,8 +3,9 @@
 import fetch, { Headers } from 'node-fetch';
 import * as cheerio from 'cheerio';
 import * as fs from 'fs';
-import { Response, Contest, Task, Test, Submission } from './interfaces';
+import { Response, Contest, Task, Test, Submission, ProblemInfo } from './interfaces';
 import { setLeftStatus, getCookie } from './commands';
+import { window, ViewColumn } from 'vscode';
 
 const HOST = 'http://codeforces.com';
 
@@ -192,8 +193,31 @@ export async function loggedAs() {
   }
 }
 
+/**
+ * Show problem statement in new tab
+ * @param prob problem info
+ */
+// @ts-ignore
+async function showProblemStatement(prob: ProblemInfo) {
+  const panel = window.createWebviewPanel(
+    'problemDesc', 'Problem description',
+    { viewColumn: ViewColumn.Three, preserveFocus: true },
+    { enableScripts: true }
+  );
+  let urlProb = `http://codeforces.com/contest/${prob.contestId}/problem/${prob.problemId}`;
+  let htmlProb = await getHTML(urlProb);
+  const $ = cheerio.load(htmlProb);
+  $("#header").remove();
+  $("#footer").remove();
+  $(".roundbox.menu-box").remove();
+  $("#sidebar").remove();
+  $(".second-level-menu").remove();
+  panel.webview.html = $("*").html() || '';
+}
+
 export async function submitContestProblem(code: string, contestId: string, problemId: string, languageId: number) {
   let url = `http://codeforces.com/contest/${contestId}/submit`;
+
   const { csrfToken } = await getCsrfToken(url, true);
   if (!csrfToken) {
     throw new Error(`Cannot get csrf_token in submit page (${url}).`);
@@ -216,7 +240,7 @@ export async function submitContestProblem(code: string, contestId: string, prob
   const resp = await fetch(url, {
     method: 'POST', headers, body: encode(form),
   });
-  console.log(resp.status, resp.statusText);
+  // console.log(resp.status, resp.statusText);
   const html = await resp.text();
   await fs.writeFileSync('/tmp/submit.html', html);
   if (html.includes('You have submitted exactly the same code before')) {
@@ -224,6 +248,12 @@ export async function submitContestProblem(code: string, contestId: string, prob
   }
 }
 
+/**
+ * 
+ * @param handle handle or email of contestant
+ * @param from offset
+ * @param count limit
+ */
 export async function getSubmissions(handle: string, from: number = 1, count: number = 10): Promise<Submission[]> {
   const url = `/api/user.status?handle=${handle}&from=${from}&count=${count}`;
   const data: Response<Submission> = await getJSON(url, 'submissions');
