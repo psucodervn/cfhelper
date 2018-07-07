@@ -2,6 +2,11 @@
   "name": "cfhelper",
   "displayName": "CF Helper",
   "description": "Codeforces helper",
+  "author": {
+    "name": "psucoder",
+    "email": "hungle.info@gmail.com",
+    "url": "https://github.com/psucodervn"
+  },
   "version": "0.0.5",
   "publisher": "psucoder",
   "license": "MIT",
