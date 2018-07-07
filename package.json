@@ -88,12 +88,61 @@
         "cfhelper.languages": {
           "description": "CF Helper languages config map",
           "default": {
+            "c": {
+              "id": 10,
+              "name": "GNU GCC 5.1.0",
+              "main": "main",
+              "ext": "c",
+              "template": "main.c.tmpl"
+            },
+            "c11": {
+              "id": 43,
+              "name": "GNU GCC C11 5.1.0",
+              "main": "main",
+              "ext": "c",
+              "template": "main.c11.tmpl"
+            },
             "cpp14": {
               "id": 50,
               "name": "GNU G++14 6.4.0",
               "main": "main",
               "ext": "cpp",
               "template": "main.cpp14.tmpl"
+            },
+            "cpp17": {
+              "id": 54,
+              "name": "GNU G++17 7.3.0",
+              "main": "main",
+              "ext": "cpp",
+              "template": "main.cpp17.tmpl"
+            },
+            "cs": {
+              "id": 9,
+              "name": "C# Mono 5",
+              "main": "main",
+              "ext": "cs",
+              "template": "main.cs.tmpl"
+            },
+            "go": {
+              "id": 32,
+              "name": "Go 1.8",
+              "main": "main",
+              "ext": "go",
+              "template": "main.go.tmpl"
+            },
+            "java": {
+              "id": 36,
+              "name": "Java 1.8.0_162",
+              "main": "Main",
+              "ext": "java",
+              "template": "main.java.tmpl"
+            },
+            "kotlin": {
+              "id": 48,
+              "name": "Kotlin 1.2",
+              "main": "main",
+              "ext": "kl",
+              "template": "main.kl.tmpl"
             },
             "py2": {
               "id": 7,

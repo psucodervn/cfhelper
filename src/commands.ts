@@ -42,7 +42,9 @@ export async function initExtension(context: ExtensionContext) {
 }
 
 export async function updateExtension(affectsConfiguration: (section: string) => boolean) {
-
+  if (affectsConfiguration(configs.Language)) {
+    global.state.update(keys.Language, getConfigWithDefault<string>(configs.Language, 'cpp14'));
+  }
 }
 
 export function setLoggedUser(handle: string, cookie?: string) {
@@ -55,7 +57,7 @@ export function setLoggedUser(handle: string, cookie?: string) {
 export function clearCredentials() {
   global.state.update(keys.Handle, undefined);
   setCookie(undefined);
-  setRightStatus(`CF: Not logged`);
+  setRightStatus(`CF: Not logged in`);
   global.rightBarItem.command = 'extension.login';
 }
 
