@@ -5,7 +5,11 @@
 
 ## Install
 
+Install from vscode extensions
+
 ## Usage
+
+> To be added...
 
 ## Running tests
 
