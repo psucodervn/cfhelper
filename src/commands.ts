@@ -100,7 +100,7 @@ async function chooseContest(): Promise<Contest | undefined> {
     const name = await window.showQuickPick(contestNames);
     if (!name) { return; }
     if (name === keys.Reload) {
-      await fetchContestList();
+      global.contests = await fetchContestList();
       continue;
     }
     contest = global.contests.find(c => `${c.id} - ${c.name}` === name);

@@ -27,13 +27,14 @@ async function getHTML(url: string, title?: string, useCookie: boolean = true) {
 
 async function getJSON(url: string, title?: string, useCookie: boolean = true) {
   const resp = await getResponse(url, title, useCookie);
+  console.log(resp);
   return await resp.json();
 }
 
 export async function getContestList(recent: number = 200) {
   const url = '/api/contest.list';
   const data: Response<Contest> = await getJSON(url, 'contest list', false);
-  if (data.status !== 'OK') { return []; }
+  if (!data || data.status !== 'OK') { return []; }
   return data.result;
 }
 
@@ -255,7 +256,11 @@ export async function submitContestProblem(code: string, contestId: string, prob
  * @param count limit
  */
 export async function getSubmissions(handle: string, from: number = 1, count: number = 10): Promise<Submission[]> {
-  const url = `/api/user.status?handle=${handle}&from=${from}&count=${count}`;
-  const data: Response<Submission> = await getJSON(url, 'submissions');
-  return data.result;
+  try {
+    const url = `/api/user.status?handle=${handle}&from=${from}&count=${count}`;
+    const data: Response<Submission> = await getJSON(url, 'submissions');
+    return data.result;
+  } catch (e) {
+    return [];
+  }
 }
