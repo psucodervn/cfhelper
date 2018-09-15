@@ -1,9 +1,10 @@
 'use strict';
 
 import * as path from 'path';
+import * as http from 'http';
 import { ExtensionContext, StatusBarAlignment, window, workspace } from 'vscode';
 import { getContestList, getContestProblems, loggedAs, login, submitContestProblem } from './api';
-import { Contest, Global, LanguageConfig, Task, LanguageConfigs } from './interfaces';
+import { Contest, Global, LanguageConfig, Task, LanguageConfigs, Problem } from './interfaces';
 import { extractProblemInfo, generateSourceFile, generateTestCases, generateSampleTemplates, mkDirRecursive } from './utils';
 import { SubmissionMonitor } from './monitor';
 import { keys, configs } from './constants';
@@ -27,18 +28,47 @@ export async function initExtension(context: ExtensionContext) {
 
   try {
     global.contests = JSON.parse(global.state.get(keys.Contests) as string);
-  } catch (e) {}
+  } catch (e) { }
 
   loggedAs().then(handle => {
     if (handle) { setLoggedUser(handle); }
     else { clearCredentials(); }
   });
 
-  if (getConfigWithDefault<boolean>(configs.AutoStartMonitor, true)) {
-    if (process.env.NODE_ENV !== 'test') {
+  if (process.env.NODE_ENV !== 'test') {
+    if (getConfigWithDefault<boolean>(configs.AutoStartMonitor, true)) {
       await startMonitorCommand();
     }
   }
+
+  await startWebServer();
+}
+
+async function startWebServer() {
+  const port = getConfigWithDefault<number>(configs.Port, 1991);
+  const handler = (req: http.ServerRequest, res: http.ServerResponse) => {
+    if (req.method !== 'POST') { return; }
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk.toString(); // convert Buffer to string
+    });
+    req.on('end', () => {
+      processRequest(body).then(() => {
+        res.end('ok');
+      }).catch(err => {
+        res.end(err.toString());
+      });
+    });
+  };
+  const server = http.createServer(handler);
+  server.listen(port, (err: Error) => {
+    console.error(err);
+  });
+}
+
+async function processRequest(bodyStr: string) {
+  const task: Task = JSON.parse(bodyStr);
+  await parseProblem(task);
 }
 
 export async function updateExtension(affectsConfiguration: (section: string) => boolean) {

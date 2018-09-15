@@ -17,4 +17,5 @@ export const configs = {
   Language: 'cfhelper.language',
   Languages: 'cfhelper.languages',
   AutoStartMonitor: 'cfhelper.autoStartMonitor',
+  Port: 'cfhelper.port',
 };

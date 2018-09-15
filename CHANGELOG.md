@@ -3,6 +3,10 @@ All notable changes to the "cfhelper" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [0.0.8] - 2018-09-15
+### Added:
+ - Support [Competitive Companion](https://github.com/jmerle/competitive-companion) extension (listen on port 1991).
+
 ## [0.0.7] - 2018-08-08
 ### Fixed:
  - Crash when there are errors from codeforces api server.

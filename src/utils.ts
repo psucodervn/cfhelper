@@ -54,8 +54,9 @@ export async function mkDirRecursive(...folders: string[]) {
 }
 
 export async function generateTestCases(prob: Task, folder: string, langConfig: LanguageConfig) {
-  await Promise.all(prob.tests.map(test => {
-    if (!test || !test.id) { return; }
+  await Promise.all(prob.tests.map((test, idx) => {
+    if (!test) { return; }
+    if (!test.id) { test.id = (idx + 1) + ""; }
     const testId = (test.id.length < 2 ? '0' : '') + test.id;
     fs.writeFileSync(path.join(folder, `${langConfig.main}.${testId}.in`), test.input);
     fs.writeFileSync(path.join(folder, `${langConfig.main}.${testId}.ans`), test.output);

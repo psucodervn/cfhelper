@@ -11,14 +11,6 @@ Install from vscode extensions
 
 > To be added...
 
-## Running tests
-
-Install dev dependencies:
-
-```sh
-$ npm i -d && npm test
-```
-
 ## Contributing
 
 Pull requests and stars are always welcome. For bugs and feature requests, [please create an issue](https://github.com/psucodervn/cfhelper/issues)
