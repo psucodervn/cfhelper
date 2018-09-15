@@ -4,7 +4,7 @@ import * as path from 'path';
 import * as http from 'http';
 import { ExtensionContext, StatusBarAlignment, window, workspace } from 'vscode';
 import { getContestList, getContestProblems, loggedAs, login, submitContestProblem } from './api';
-import { Contest, Global, LanguageConfig, Task, LanguageConfigs, Problem } from './interfaces';
+import { Contest, Global, LanguageConfig, Task, LanguageConfigs } from './interfaces';
 import { extractProblemInfo, generateSourceFile, generateTestCases, generateSampleTemplates, mkDirRecursive } from './utils';
 import { SubmissionMonitor } from './monitor';
 import { keys, configs } from './constants';
